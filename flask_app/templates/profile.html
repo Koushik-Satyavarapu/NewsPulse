@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Profile - NewsPulse{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card p-4 mt-4">
+            <h2 class="text-center mb-4">Profile</h2>
+            <p class="text-center"><strong>Username:</strong> {{ username }}</p>
+            <p class="text-center text-muted">Manage your NewsPulse account settings below.</p>
+            <!-- Placeholder for future profile editing -->
+            <div class="text-center">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,4 @@
+2025-08-21 23:13:58,263 - main - INFO - Starting FastAPI server
+2025-08-21 23:13:58,273 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): newsapi.org:443
+2025-08-21 23:13:59,495 - urllib3.connectionpool - DEBUG - https://newsapi.org:443 "GET /v2/everything?q=test&apiKey=b10326e677404906b8278f44b674b094 HTTP/1.1" 200 None
+2025-08-21 23:13:59,956 - main - INFO - NewsAPI key validated successfully on startup

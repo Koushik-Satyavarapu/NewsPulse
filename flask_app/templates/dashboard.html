@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - NewsPulse{% endblock %}
+{% block content %}
+<div class="row">
+    <!-- Left Column: News Articles -->
+    <div class="col-lg-8">
+        <div class="card p-4 mb-4">
+            <h2 class="mb-4">News Search</h2>
+            <form id="searchForm" method="POST" action="{{ url_for('search') }}">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="region" class="form-label">Region</label>
+                        <select class="form-select" id="region" name="region">
+                            <option value="">Select Region</option>
+                            <option value="North America">North America</option>
+                            <option value="Asia">Asia</option>
+                            <option value="Europe">Europe</option>
+                            <option value="Africa">Africa</option>
+                            <option value="Australia">Australia</option>
+                            <option value="South America">South America</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="topic" class="form-label">Topic</label>
+                        <select class="form-select" id="topic" name="topic">
+                            <option value="">Select Topic</option>
+                            <option value="business">Business</option>
+                            <option value="sports">Sports</option>
+                            <option value="technology">Technology</option>
+                            <option value="health">Health</option>
+                            <option value="politics">Politics</option>
+                            <option value="entertainment">Entertainment</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="city" class="form-label">City</label>
+                        <input type="text" class="form-control" id="city" name="city" placeholder="e.g., Mumbai">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="keyword" class="form-label">Keyword</label>
+                        <input type="text" class="form-control" id="keyword" name="keyword" placeholder="e.g., economy">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-3">Search News</button>
+            </form>
+        </div>
+        {% if data %}
+            <h3 class="mb-3">News Articles</h3>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for article in data.articles %}
+                    <div class="col">
+                        <div class="card h-100">
+                            {% if article.urlToImage %}
+                                <img src="{{ article.urlToImage }}" class="card-img-top" alt="{{ article.title | truncate(50, True) }}" style="height: 120px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px;">
+                            {% else %}
+                                <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 120px; border-top-left-radius: 10px; border-top-right-radius: 10px;">
+                                    <span class="text-white" style="font-size: 0.9rem;">No Image</span>
+                                </div>
+                            {% endif %}
+                            <div class="card-body">
+                                {% set sentiment = article.sentiment | default('neutral') %}
+                                <span class="badge bg-{{ 'success' if sentiment == 'positive' else 'danger' if sentiment == 'negative' else 'warning' }} mb-2">
+                                    {{ sentiment | capitalize }}
+                                </span>
+                                <h5 class="card-title" style="font-size: 1.1rem;">{{ article.title | truncate(50, True) }}</h5>
+                                <p class="card-text" style="font-size: 0.9rem;">{{ article.description | default('No description available') | truncate(100, True) }}</p>
+                                {% if article.entities %}
+                                    <p class="card-text" style="font-size: 0.8rem;">
+                                        <strong>Entities:</strong>
+                                        {% for entity in article.entities %}
+                                            <span class="badge bg-info text-dark me-1">{{ entity.text }} ({{ entity.label }})</span>
+                                        {% endfor %}
+                                    </p>
+                                {% endif %}
+                                <a href="{{ article.url }}" target="_blank" class="btn btn-outline-primary btn-sm">Read More</a>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <p>No articles found.</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    <!-- Right Column: Charts -->
+    <div class="col-lg-4 sidebar">
+        {% if data %}
+            <div class="card p-3 mb-4">
+                <h4 class="mb-3">Sentiment Analysis</h4>
+                <div class="chart-container">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+            </div>
+            <div class="card p-3">
+                <h4 class="mb-3">Top Trends</h4>
+                <div class="chart-container">
+                    <canvas id="trendsChart"></canvas>
+                </div>
+            </div>
+            <script>
+                // Pie Chart for Sentiments
+                const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+                new Chart(sentimentCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Positive', 'Neutral', 'Negative'],
+                        datasets: [{
+                            data: [
+                                {{ data.sentiments.positive | default(0) }},
+                                {{ data.sentiments.neutral | default(0) }},
+                                {{ data.sentiments.negative | default(0) }}
+                            ],
+                            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+                // Bar Chart for Trends
+                const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+                new Chart(trendsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ data.trends.keys() | list | tojson }},
+                        datasets: [{
+                            label: 'Frequency',
+                            data: {{ data.trends.values() | list | tojson }},
+                            backgroundColor: '#20c997',
+                            borderColor: '#17a2b8',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            </script>
+        {% else %}
+            <div class="card p-3">
+                <p class="text-muted">Perform a search to view sentiments and trends.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('searchForm');
+        const spinner = document.querySelector('.spinner');
+        if (form && spinner) {
+            form.addEventListener('submit', () => {
+                spinner.classList.add('active');
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Analyze Text - NewsPulse{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card p-4 mt-4">
+            <h2 class="text-center mb-4">Text Analysis</h2>
+            <form id="analyzeForm" method="POST" action="{{ url_for('analyze') }}">
+                <div class="mb-3">
+                    <label for="textInput" class="form-label">Enter Text for Analysis</label>
+                    <textarea class="form-control" id="textInput" name="text" rows="5" placeholder="Type or paste your text here..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Analyze</button>
+            </form>
+            {% if result %}
+                <div class="mt-4">
+                    <h4>Analysis Results</h4>
+                    <p><strong>Sentiment:</strong> <span class="badge bg-{{ 'success' if result.sentiment == 'POSITIVE' else 'danger' if result.sentiment == 'NEGATIVE' else 'warning' }}">{{ result.sentiment }}</span> (Score: {{ result.sentiment_score | round(2) }})</p>
+                    {% if result.entities %}
+                        <p><strong>Entities:</strong></p>
+                        <div>
+                            {% for entity in result.entities %}
+                                <span class="badge bg-info text-dark me-1">{{ entity.text }} ({{ entity.label }})</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>No entities detected.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('analyzeForm');
+        const spinner = document.querySelector('.spinner');
+        if (form && spinner) {
+            form.addEventListener('submit', () => {
+                spinner.classList.add('active');
+            });
+        }
+    });
+</script>
+{% endblock %}

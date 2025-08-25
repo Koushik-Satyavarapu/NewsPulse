@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Home - NewsPulse{% endblock %}
+{% block content %}
+<div class="container-fluid text-center my-5">
+    <!-- Hero Section -->
+    <div class="hero-section mb-5">
+        <h1 class="display-4 fw-bold">NewsPulse</h1>
+        <p class="lead text-muted">Your Ultimate Source for Real-Time News Insights</p>
+        <p class="mb-4">Discover the latest news, analyze sentiments, and track trending topics with our intuitive platform.</p>
+        <a href="{{ url_for('dashboard' if current_user.is_authenticated else 'login') }}" class="btn btn-primary btn-lg px-5">Explore Now</a>
+    </div>
+    <!-- Feature Cards -->
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="gg-news" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <h5 class="card-title mt-3">Real-Time News</h5>
+                    <p class="card-text">Access the latest news articles from around the world, tailored to your interests.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="gg-chart" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <h5 class="card-title mt-3">Sentiment Analysis</h5>
+                    <p class="card-text">Understand the emotional tone of news with our advanced sentiment analysis tools.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="gg-trending" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <h5 class="card-title mt-3">Trending Topics</h5>
+                    <p class="card-text">Stay ahead with insights into the most popular topics and keywords in the news.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .hero-section {
+        padding: 4rem 2rem;
+        border-radius: 15px;
+        background-color: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .hero-section h1 {
+        color: var(--text-color);
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-section .btn-primary {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s;
+    }
+
+    .hero-section .btn-primary:hover {
+        transform: scale(1.05);
+    }
+
+    @media (max-width: 575.98px) {
+        .hero-section {
+            padding: 2rem 1rem;
+        }
+    }
+</style>
+{% endblock %}
