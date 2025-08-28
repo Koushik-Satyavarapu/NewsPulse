@@ -1,22 +1,38 @@
 {% extends 'base.html' %}
 {% block title %}Login - NewsPulse{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card p-4 mt-4">
-            <h2 class="text-center mb-4">Login</h2>
-            <form method="POST" action="{{ url_for('login') }}">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
+<div class="container py-5" style="background: var(--bg-secondary); min-height: 100vh;">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline);">Login</h2>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-4 animate__animated animate__shakeX">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="email" class="form-label" style="color: var(--text-body);">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label" style="color: var(--text-body);">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+                    <p class="text-center mt-3" style="color: var(--text-body);">
+                        <a href="{{ url_for('login_google') }}" class="btn btn-outline-danger w-100 mb-2">Connect with Google</a>
+                        Don't have an account? <a href="{{ url_for('signup') }}" style="color: var(--accent-secondary);">Sign up</a>
+                    </p>
                 </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Login</button>
-            </form>
-            <p class="text-center mt-3">Don't have an account? <a href="{{ url_for('signup') }}" class="text-decoration-none">Sign up</a></p>
+            </div>
         </div>
     </div>
 </div>

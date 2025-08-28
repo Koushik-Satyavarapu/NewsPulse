@@ -3,304 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}NewsPulse{% endblock %}</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Chart.js for Pie and Bar Charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <!-- Google Fonts: Poppins -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap">
-    <!-- CSS.gg Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/css.gg/icons/all.css">
+    <title>{% block title %}{% endblock %} - NewsPulse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-dark: rgb(24, 24, 24);
-            --bg-light: #e4e4e4;
-            --primary-color: #20c997;
-            --primary-hover: #17a2b8;
-            --text-color: #fff;
-            --card-bg: #fff;
-            --body-bg: linear-gradient(
-                to right top,
-                #d16ba5,
-                #c777b9,
-                #ba83ca,
-                #aa8fd8,
-                #9a9ae1,
-                #8aa7ec,
-                #79b3f4,
-                #69bff8,
-                #52cffe,
-                #41dfff,
-                #46eefa,
-                #5ffbf1
-            );
+            --bg-light: #F9FAFB;
+            --bg-gradient: linear-gradient(180deg, #F9FAFB 0%, #E5E7EB 100%);
+            --bg-secondary: #F3F4F6;
+            --navbar-dark: #111827;
+            --text-headline: #111827;
+            --text-body: #374151;
+            --text-light: #F9FAFB;
+            --accent-primary: #EF4444;
+            --accent-secondary: #3B82F6;
+            --accent-success: #22C55E;
+            --accent-warning: #FACC15;
+            --card-bg-light: #FFFFFF;
         }
-
-        *,
-        *::after,
-        *::before {
-            font-family: "Poppins", sans-serif;
-        }
-
-        a,
-        a:hover,
-        a:focus,
-        a:active {
-            text-decoration: none;
-            color: inherit;
-        }
-
-        body {
-            overflow-x: hidden;
-            background: var(--body-bg);
-            min-height: 100vh;
-            color: var(--text-color);
-            transition: background 0.3s ease;
-        }
-
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-light); }
         .navbar {
-            background-color: var(--bg-dark);
-            padding: 1rem;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background: var(--navbar-dark);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: transform 0.3s ease-in-out;
         }
-
-        .navbar-brand,
+        .navbar.hidden { transform: translateY(-100%); }
         .nav-link {
-            color: var(--text-color) !important;
+            color: var(--text-light) !important;
+            position: relative;
             transition: color 0.3s;
         }
-
-        .navbar-brand:hover,
-        .nav-link:hover {
-            color: #5ffbf1 !important;
+        .nav-link::after {
+            content: '';
+            display: block;
+            width: 0;
+            height: 2px;
+            background: var(--accent-secondary);
+            transition: width 0.3s;
+            position: absolute;
+            bottom: -2px;
+            left: 0;
         }
-
-        .navbar .menu-toggle {
-            display: none;
-            color: var(--text-color);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 1rem;
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-        }
-
-        .nav-links .hide-toggle {
-            display: none;
-        }
-
-        .container-fluid {
-            max-width: 1200px;
-            margin-top: 2rem;
-        }
-
-        .card {
-            background-color: var(--card-bg);
+        .nav-link:hover::after { width: 100%; }
+        .nav-link:hover { color: var(--accent-primary) !important; }
+        .btn-primary {
+            background: var(--accent-primary);
+            color: var(--text-light);
+            border-radius: 6px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
-
+        .btn-primary:hover {
+            background: #DC2626;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--accent-secondary);
+            color: var(--accent-secondary);
+            border-radius: 6px;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-secondary::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-secondary);
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover::before { left: 0; }
+        .btn-secondary:hover { color: var(--text-light); }
+        .card {
+            background-color: var(--card-bg-light);
+            transition: all 0.3s ease;
+            border-radius: 15px;
+        }
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            transition: background-color 0.3s;
+        .form-select, .form-control { border-color: var(--accent-secondary); }
+        .form-select:focus, .form-control:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
         }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-            border-color: var(--primary-hover);
+        .dropdown-menu {
+            background-color: var(--card-bg-light);
+            transform-origin: top;
+            transform: scaleY(0);
+            transition: all 0.3s ease-in-out;
         }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
+        .dropdown-menu.show { transform: scaleY(1); }
+        .dropdown-item:hover { background-color: rgba(59, 130, 246, 0.1); }
+        .ripple {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
         }
-
-        .sidebar {
-            height: fit-content;
-            position: sticky;
-            top: 2rem;
-        }
-
-        .chart-container {
-            max-width: 100%;
-            height: 200px;
-            margin-bottom: 1rem;
-        }
-
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1050;
-        }
-
-        .spinner {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-        }
-
-        .spinner.active {
-            display: block;
-        }
-
-        /* Mobile Responsive Styles */
-        @media (max-width: 575.98px) {
-            .navbar {
-                position: relative;
-            }
-
-            .navbar .menu-toggle {
-                display: block;
-            }
-
-            .nav-links {
-                position: absolute;
-                top: 0px;
-                left: 40%;
-                right: 0;
-                height: 100vh;
-                flex-direction: column;
-                background-color: var(--bg-dark);
-                box-shadow: -35px 0px 20px -25px rgba(0, 0, 0, 0.548);
-                -webkit-backdrop-filter: blur(4px);
-                backdrop-filter: blur(4px);
-                justify-content: center;
-                align-items: flex-start;
-                padding: 0rem;
-                z-index: 999;
-                transition: all 200ms ease;
-            }
-
-            .nav-links.show {
-                transform: translateX(0%);
-                visibility: visible;
-                opacity: 1;
-            }
-
-            .nav-links.hide {
-                transform: translateX(100%);
-                visibility: hidden;
-                opacity: 0;
-            }
-
-            .nav-links .hide-toggle {
-                --ggs: 1.5;
-                display: block;
-                position: absolute;
-                top: 20px;
-                right: 20px;
-                cursor: pointer;
-                font-size: 50px;
-                color: var(--text-color);
-            }
-
-            .nav-links .nav-link {
-                width: 100%;
-                border-radius: 10px;
-                padding: 1rem 2rem;
-                margin-left: 15px;
-                margin-bottom: 20px;
-            }
-
-            .nav-links .nav-link:hover {
-                color: rgb(0, 0, 0) !important;
-                background: whitesmoke;
-            }
-        }
-
-        /* Background Animation */
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        body {
-            background-size: 200% 200%;
-            animation: gradientShift 15s ease infinite;
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
         }
     </style>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Mobile Menu Toggle
-            const menuToggle = document.querySelector('.menu-toggle');
-            const navLinks = document.querySelector('.nav-links');
-            const hideToggle = document.querySelector('.hide-toggle');
-            if (menuToggle && navLinks && hideToggle) {
-                menuToggle.addEventListener('click', () => {
-                    navLinks.classList.toggle('show');
-                    navLinks.classList.toggle('hide');
-                });
-                hideToggle.addEventListener('click', () => {
-                    navLinks.classList.remove('show');
-                    navLinks.classList.add('hide');
-                });
+        // Sticky Navbar: Hide on scroll down, show on scroll up
+        let lastScrollTop = 0;
+        window.addEventListener('scroll', function() {
+            let currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+            let navbar = document.querySelector('.navbar');
+            if (currentScroll > lastScrollTop && currentScroll > 100) {
+                navbar.classList.add('hidden');
+            } else {
+                navbar.classList.remove('hidden');
             }
+            lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+        });
 
-            // Toast Notifications
-            const flashMessages = JSON.parse('{{ get_flashed_messages(with_categories=true) | tojson | safe }}');
-            if (flashMessages.length) {
-                const toastContainer = document.createElement('div');
-                toastContainer.className = 'toast-container';
-                document.body.appendChild(toastContainer);
-                flashMessages.forEach(([category, message]) => {
-                    const toast = document.createElement('div');
-                    toast.className = `toast align-items-center text-white bg-${category === 'message' ? 'success' : 'danger'} border-0`;
-                    toast.setAttribute('role', 'alert');
-                    toast.setAttribute('aria-live', 'assertive');
-                    toast.setAttribute('aria-atomic', 'true');
-                    toast.innerHTML = `
-                        <div class="d-flex">
-                            <div class="toast-body">${message}</div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    `;
-                    toastContainer.appendChild(toast);
-                    const bsToast = new bootstrap.Toast(toast);
-                    bsToast.show();
-                    setTimeout(() => bsToast.hide(), 5000);
+        // Fade-in on scroll for cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate__animated', 'animate__fadeInUp');
+                        observer.unobserve(entry.target);
+                    }
                 });
-            }
+            }, { threshold: 0.1 });
+            cards.forEach(card => observer.observe(card));
+
+            // Ripple effect for buttons
+            document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const rect = button.getBoundingClientRect();
+                    const ripple = document.createElement('span');
+                    ripple.classList.add('ripple');
+                    const size = Math.max(rect.width, rect.height);
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = e.clientX - rect.left - size / 2 + 'px';
+                    ripple.style.top = e.clientY - rect.top - size / 2 + 'px';
+                    button.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
         });
     </script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('home') }}">NewsPulse</a>
-            <i class="gg-menu menu-toggle"></i>
-            <div class="nav-links hide">
-                <i class="gg-close hide-toggle"></i>
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-lg">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('home') }}" style="color: var(--text-light);">NewsPulse</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
-                    </li>
+                    {% if request.path != '/login' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                        </li>
+                    {% endif %}
                     {% if current_user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">Trending Now</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('analyze') }}">Analyze Text</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
@@ -317,16 +208,15 @@
             </div>
         </div>
     </nav>
+
     <div class="container-fluid">
         {% block content %}{% endblock %}
     </div>
-    <div class="spinner">
-        <div class="spinner-border text-primary" role="status">
+
+    <div id="loading" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-light" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
     </div>
-    <!-- Bootstrap 5 JS and Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
 </body>
 </html>

@@ -1,17 +1,81 @@
 {% extends 'base.html' %}
 {% block title %}Profile - NewsPulse{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card p-4 mt-4">
-            <h2 class="text-center mb-4">Profile</h2>
-            <p class="text-center"><strong>Username:</strong> {{ username }}</p>
-            <p class="text-center text-muted">Manage your NewsPulse account settings below.</p>
-            <!-- Placeholder for future profile editing -->
-            <div class="text-center">
-                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+<div class="container py-5" style="background: var(--bg-secondary); min-height: 100vh;">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline);">Profile</h2>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-4 animate__animated animate__shakeX">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    <div class="mb-3">
+                        <label class="form-label" style="color: var(--text-body);">Username</label>
+                        <p class="form-control" id="display_username">{{ username }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="color: var(--text-body);">Email</label>
+                        <p class="form-control" id="display_email">{{ email }}</p>
+                    </div>
+                    <button class="btn btn-primary w-100 mb-3" id="edit_profile_btn">Edit Profile</button>
+                    <form method="POST" id="edit_form" style="display: none;">
+                        <div class="mb-3">
+                            <label for="edit_username" class="form-label" style="color: var(--text-body);">New Username</label>
+                            <input type="text" class="form-control" id="edit_username" name="username" value="{{ username }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_email" class="form-label" style="color: var(--text-body);">New Email</label>
+                            <input type="email" class="form-control" id="edit_email" name="email" value="{{ email }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+                        <button type="button" class="btn btn-secondary w-100 mt-2" id="cancel_edit_btn">Cancel</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('edit_profile_btn').addEventListener('click', function() {
+        document.getElementById('edit_form').style.display = 'block';
+        this.style.display = 'none';
+    });
+
+    document.getElementById('cancel_edit_btn').addEventListener('click', function() {
+        document.getElementById('edit_form').style.display = 'none';
+        document.getElementById('edit_profile_btn').style.display = 'block';
+    });
+
+    document.getElementById('edit_form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newUsername = document.getElementById('edit_username').value;
+        const newEmail = document.getElementById('edit_email').value;
+        fetch('/profile/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username: newUsername, email: newEmail })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('display_username').textContent = newUsername;
+                document.getElementById('display_email').textContent = newEmail;
+                document.getElementById('edit_form').style.display = 'none';
+                document.getElementById('edit_profile_btn').style.display = 'block';
+            } else {
+                alert('Update failed: ' + data.message);
+            }
+        })
+        .catch(error => alert('Error updating profile: ' + error));
+    });
+</script>
 {% endblock %}

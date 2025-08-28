@@ -1,22 +1,34 @@
 {% extends 'base.html' %}
 {% block title %}Sign Up - NewsPulse{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card p-4 mt-4">
-            <h2 class="text-center mb-4">Sign Up</h2>
-            <form method="POST" action="{{ url_for('signup') }}">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
+<div class="container py-5" style="background: var(--bg-secondary); min-height: 100vh;">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline);">Sign Up</h2>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label" style="color: var(--text-body);">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label" style="color: var(--text-body);">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label" style="color: var(--text-body);">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label" style="color: var(--text-body);">Re-enter Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Sign Up</button>
+                    </form>
+                    <p class="text-center mt-3" style="color: var(--text-body);">Already have an account? <a href="{{ url_for('login') }}" style="color: var(--accent-secondary);">Log in</a></p>
                 </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Sign Up</button>
-            </form>
-            <p class="text-center mt-3">Already have an account? <a href="{{ url_for('login') }}" class="text-decoration-none">Log in</a></p>
+            </div>
         </div>
     </div>
 </div>

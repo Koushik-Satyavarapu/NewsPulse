@@ -1,170 +1,250 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard - NewsPulse{% endblock %}
+{% block title %}Trending Now - NewsPulse{% endblock %}
 {% block content %}
-<div class="row">
-    <!-- Left Column: News Articles -->
-    <div class="col-lg-8">
-        <div class="card p-4 mb-4">
-            <h2 class="mb-4">News Search</h2>
-            <form id="searchForm" method="POST" action="{{ url_for('search') }}">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="region" class="form-label">Region</label>
-                        <select class="form-select" id="region" name="region">
-                            <option value="">Select Region</option>
-                            <option value="North America">North America</option>
-                            <option value="Asia">Asia</option>
-                            <option value="Europe">Europe</option>
-                            <option value="Africa">Africa</option>
-                            <option value="Australia">Australia</option>
-                            <option value="South America">South America</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="topic" class="form-label">Topic</label>
-                        <select class="form-select" id="topic" name="topic">
-                            <option value="">Select Topic</option>
-                            <option value="business">Business</option>
-                            <option value="sports">Sports</option>
-                            <option value="technology">Technology</option>
-                            <option value="health">Health</option>
-                            <option value="politics">Politics</option>
-                            <option value="entertainment">Entertainment</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="city" class="form-label">City</label>
-                        <input type="text" class="form-control" id="city" name="city" placeholder="e.g., Mumbai">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="keyword" class="form-label">Keyword</label>
-                        <input type="text" class="form-control" id="keyword" name="keyword" placeholder="e.g., economy">
-                    </div>
+<div class="container-fluid py-5" style="background: var(--bg-gradient); min-height: 100vh;">
+    <!-- Filter Section -->
+    <section class="container mb-4">
+        <h2 class="mb-4 text-center fw-bold animate__animated animate__fadeInDown" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">News Search</h2>
+        <form method="POST" action="{{ url_for('search') }}" class="bg-white p-4 rounded shadow-lg animate__animated animate__fadeInDown" style="border-radius: 15px; animation-delay: 0.2s;">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3 col-sm-6">
+                    <label for="region" class="form-label" style="color: var(--text-headline);">Area</label>
+                    <select class="form-select" id="region" name="region">
+                        <option value="">Select Area</option>
+                        <option value="Africa">Africa</option>
+                        <option value="Antarctica">Antarctica</option>
+                        <option value="Asia">Asia</option>
+                        <option value="Australia">Australia</option>
+                        <option value="Europe">Europe</option>
+                        <option value="North America">North America</option>
+                        <option value="South America">South America</option>
+                    </select>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 mt-3">Search News</button>
-            </form>
-        </div>
+                <div class="col-md-3 col-sm-6">
+                    <label for="topic" class="form-label" style="color: var(--text-headline);">Topic</label>
+                    <select class="form-select" id="topic" name="topic">
+                        <option value="">Select Topic</option>
+                        <option value="Business">Business</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Health">Health</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label for="keyword" class="form-label" style="color: var(--text-headline);">Keyword</label>
+                    <input type="text" class="form-control" id="keyword" name="keyword" placeholder="e.g., stock market, AI, vaccine">
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <button type="submit" class="btn btn-primary w-100">Search News</button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section class="container mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show animate__animated animate__shakeX" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Active Filters Section -->
+    {% if data and (data.region or data.topic or data.keyword) %}
+        <section class="container mb-4">
+            <div class="flex flex-wrap gap-2" id="active-filters">
+                {% if data.region %}
+                    <span class="badge bg-secondary animate__animated animate__fadeInLeft" style="animation-delay: 0.1s;">
+                        Area: {{ data.region }}
+                    </span>
+                {% endif %}
+                {% if data.topic %}
+                    <span class="badge bg-secondary animate__animated animate__fadeInLeft" style="animation-delay: 0.2s;">
+                        Topic: {{ data.topic }}
+                    </span>
+                {% endif %}
+                {% if data.keyword %}
+                    <span class="badge bg-secondary animate__animated animate__fadeInLeft" style="animation-delay: 0.3s;">
+                        Keyword: {{ data.keyword }}
+                    </span>
+                {% endif %}
+            </div>
+        </section>
+    {% else %}
+        <section class="container mb-4">
+            <div class="text-gray-400 text-lg font-medium animate__animated animate__fadeIn" style="color: var(--text-body);">
+                Showing <span style="color: var(--accent-secondary);">All News</span>
+            </div>
+        </section>
+    {% endif %}
+
+    <!-- News Cards or Placeholder -->
+    <section class="container">
         {% if data %}
-            <h3 class="mb-3">News Articles</h3>
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-                {% for article in data.articles %}
-                    <div class="col">
-                        <div class="card h-100">
-                            {% if article.urlToImage %}
-                                <img src="{{ article.urlToImage }}" class="card-img-top" alt="{{ article.title | truncate(50, True) }}" style="height: 120px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px;">
-                            {% else %}
-                                <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 120px; border-top-left-radius: 10px; border-top-right-radius: 10px;">
-                                    <span class="text-white" style="font-size: 0.9rem;">No Image</span>
-                                </div>
-                            {% endif %}
-                            <div class="card-body">
+            <h3 class="mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">News Articles</h3>
+            <div class="row g-3">
+                {% for article in data.articles[:12] %}
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card h-100 shadow-lg border-0 animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                            <div class="card-img-top" style="height: 200px; overflow: hidden;">
+                                {% if article.urlToImage %}
+                                    <img src="{{ article.urlToImage }}" class="img-fluid w-100 h-100" style="object-fit: cover;" alt="Article Image">
+                                {% else %}
+                                    <div class="bg-light text-muted text-center d-flex align-items-center justify-content-center h-100">
+                                        No Image
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-3">
                                 {% set sentiment = article.sentiment | default('neutral') %}
-                                <span class="badge bg-{{ 'success' if sentiment == 'positive' else 'danger' if sentiment == 'negative' else 'warning' }} mb-2">
-                                    {{ sentiment | capitalize }}
+                                <span class="badge mb-2 animate__animated animate__bounceIn" style="background-color: {% if sentiment == 'positive' %}var(--accent-success){% elif sentiment == 'negative' %}var(--accent-primary){% else %}var(--accent-warning){% endif %};">
+                                    <span style="font-size: 0.9rem;">{% if sentiment == 'positive' %}😊{% elif sentiment == 'negative' %}😔{% else %}😐{% endif %}</span>
+                                    {{ sentiment | capitalize }} ({{ article.sentiment_score | default(0) | round(2) }})
                                 </span>
-                                <h5 class="card-title" style="font-size: 1.1rem;">{{ article.title | truncate(50, True) }}</h5>
-                                <p class="card-text" style="font-size: 0.9rem;">{{ article.description | default('No description available') | truncate(100, True) }}</p>
-                                {% if article.entities %}
-                                    <p class="card-text" style="font-size: 0.8rem;">
-                                        <strong>Entities:</strong>
-                                        {% for entity in article.entities %}
-                                            <span class="badge bg-info text-dark me-1">{{ entity.text }} ({{ entity.label }})</span>
-                                        {% endfor %}
+                                <h5 class="card-title fw-bold" style="font-size: 1.1rem; color: var(--text-headline);">
+                                    <a href="{{ article.url }}" target="_blank" class="text-decoration-none" style="color: var(--text-headline);">{{ article.title | truncate(50, True) }}</a>
+                                </h5>
+                                <p class="card-text" style="font-size: 0.9rem; color: var(--text-body);">{{ article.description | default('No description available') | truncate(100, True) }}</p>
+                                {% if article.publishedAt %}
+                                    <p class="card-text" style="font-size: 0.8rem; color: var(--text-body);">
+                                        <small>Published: {{ article.publishedAt | default('') | datetimeformat }}</small>
                                     </p>
                                 {% endif %}
-                                <a href="{{ article.url }}" target="_blank" class="btn btn-outline-primary btn-sm">Read More</a>
+                                {% if article.entities %}
+                                    <div class="mb-2">
+                                        {% for entity in article.entities %}
+                                            <span class="badge bg-light text-dark border" style="font-size: 0.8rem; border-color: var(--accent-secondary);">{{ entity.text }} ({{ entity.label }})</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <a href="{{ article.url }}" class="btn btn-secondary btn-sm" target="_blank">View Full News</a>
                             </div>
                         </div>
                     </div>
                 {% else %}
-                    <p>No articles found.</p>
+                    <div class="col-12">
+                        <p style="color: var(--text-body);">No articles found.</p>
+                    </div>
                 {% endfor %}
             </div>
-        {% endif %}
-    </div>
-    <!-- Right Column: Charts -->
-    <div class="col-lg-4 sidebar">
-        {% if data %}
-            <div class="card p-3 mb-4">
-                <h4 class="mb-3">Sentiment Analysis</h4>
-                <div class="chart-container">
-                    <canvas id="sentimentChart"></canvas>
-                </div>
+        {% else %}
+            <div class="text-center py-5 animate__animated animate__fadeIn">
+                <div style="font-size: 3rem; colors: var(--text-body);">📜</div>
+                <p class="text-muted" style="font-size: 1.2rem; color: var(--text-body); opacity: 0.7;">No news to display, use the filters above.</p>
             </div>
-            <div class="card p-3">
-                <h4 class="mb-3">Top Trends</h4>
-                <div class="chart-container">
-                    <canvas id="trendsChart"></canvas>
+        {% endif %}
+    </section>
+
+    <!-- Charts Section -->
+    {% if data %}
+        <section class="container mt-5">
+            <h3 class="mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">Insights</h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card shadow-lg border-0 p-4 animate__animated animate__zoomIn">
+                        <h4 class="text-center mb-3 fw-bold" style="font-size: 1.2rem; color: var(--text-headline);">Sentiment Distribution</h4>
+                        <div class="chart-container" style="width: 100%; max-width: 300px; height: 250px; margin: 0 auto;">
+                            <canvas id="sentimentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-lg border-0 p-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                        <h4 class="text-center mb-3 fw-bold" style="font-size: 1.2rem; color: var(--text-headline);">Most Repeated Words</h4>
+                        <div class="chart-container" style="width: 100%; max-width: 300px; height: 250px; margin: 0 auto;">
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
             <script>
-                // Pie Chart for Sentiments
-                const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
-                new Chart(sentimentCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: ['Positive', 'Neutral', 'Negative'],
-                        datasets: [{
-                            data: [
-                                {{ data.sentiments.positive | default(0) }},
-                                {{ data.sentiments.neutral | default(0) }},
-                                {{ data.sentiments.negative | default(0) }}
-                            ],
-                            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-                // Bar Chart for Trends
-                const trendsCtx = document.getElementById('trendsChart').getContext('2d');
-                new Chart(trendsCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: {{ data.trends.keys() | list | tojson }},
-                        datasets: [{
-                            label: 'Frequency',
-                            data: {{ data.trends.values() | list | tojson }},
-                            backgroundColor: '#20c997',
-                            borderColor: '#17a2b8',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
-                        },
-                        plugins: {
-                            legend: { display: false }
-                        }
+                document.addEventListener('DOMContentLoaded', function() {
+                    try {
+                        // Sentiment Pie Chart
+                        const sentimentData = {
+                            positive: {{ data.sentiments.positive | default(0) }},
+                            negative: {{ data.sentiments.negative | default(0) }},
+                            neutral: {{ data.sentiments.neutral | default(0) }}
+                        };
+                        const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+                        new Chart(sentimentCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Positive', 'Negative', 'Neutral'],
+                                datasets: [{
+                                    data: [
+                                        sentimentData.positive || 0,
+                                        sentimentData.negative || 0,
+                                        sentimentData.neutral || 0
+                                    ],
+                                    backgroundColor: [
+                                        '#22C55E', // Vibrant green for positive
+                                        '#EF4444', // Vibrant red for negative
+                                        '#F59E0B'  // Amber for neutral
+                                    ],
+                                    borderColor: 'var(--card-bg-light)',
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                        labels: { font: { size: 10, family: 'Poppins' } }
+                                    }
+                                },
+                                animation: {
+                                    animateScale: true, // Expand slices from center
+                                    animateRotate: true
+                                }
+                            }
+                        });
+
+                        // Top Keywords Bar Chart
+                        const trendsData = {
+                            labels: [{% for key in data.trends.keys() %}'{{ key }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                            values: [{% for value in data.trends.values() %}{{ value }}{% if not loop.last %},{% endif %}{% endfor %}]
+                        };
+                        const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+                        new Chart(trendsCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: trendsData.labels.length ? trendsData.labels : ['No Data'],
+                                datasets: [{
+                                    label: 'Frequency',
+                                    data: trendsData.values.length ? trendsData.values : [0],
+                                    backgroundColor: 'linear-gradient(180deg, #3B82F6, #1D4ED8)',
+                                    borderColor: '#111827',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { font: { size: 10, family: 'Poppins' } } },
+                                    x: { ticks: { font: { size: 10, family: 'Poppins' }, maxRotation: 45, minRotation: 45 } }
+                                },
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                animation: {
+                                    animateRotate: true, // Bars grow upward
+                                    animateScale: true
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Chart rendering error:', error);
                     }
                 });
             </script>
-        {% else %}
-            <div class="card p-3">
-                <p class="text-muted">Perform a search to view sentiments and trends.</p>
-            </div>
-        {% endif %}
-    </div>
+        </section>
+    {% endif %}
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('searchForm');
-        const spinner = document.querySelector('.spinner');
-        if (form && spinner) {
-            form.addEventListener('submit', () => {
-                spinner.classList.add('active');
-            });
-        }
-    });
-</script>
 {% endblock %}

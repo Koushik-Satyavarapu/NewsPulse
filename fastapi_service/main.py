@@ -1,174 +1,227 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import requests
+from datetime import datetime
+from dateutil import parser
+import logging
+import re
+from typing import Dict, List
 from transformers import pipeline
 import spacy
-import nltk
-from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-import logging
-import os
-import re
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+from nltk.corpus import stopwords
+from collections import Counter
+import nltk
 
 # Download NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-    nltk.data.find('tokenizers/punkt_tab')
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('punkt')
-    nltk.download('punkt_tab')
-    nltk.download('stopwords')
-
-# Load spaCy model
-try:
-    nlp = spacy.load('en_core_web_sm')
-except OSError:
-    logger.error("spaCy model 'en_core_web_sm' not found. Please install it using: python -m spacy download en_core_web_sm")
-    raise Exception("spaCy model 'en_core_web_sm' is required.")
-
-# Load Hugging Face sentiment analysis pipeline
-try:
-    sentiment_analyzer = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
-except Exception as e:
-    logger.error(f"Failed to load Hugging Face model: {str(e)}")
-    raise Exception("Hugging Face model 'distilbert-base-uncased-finetuned-sst-2-english' is required.")
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 app = FastAPI()
-NEWS_API_KEY = 'b10326e677404906b8278f44b674b094'  # Your NewsAPI key
 
-# Text preprocessing pipeline
-def preprocess_text(text):
-    if not text:
-        return ""
-    # Clean text
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize NLP models
+sentiment_analyzer = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+nlp = spacy.load("en_core_web_sm")
+stop_words = set(stopwords.words('english'))
+
+def clean_text(text: str) -> str:
     text = re.sub(r'[^\w\s]', '', text.lower())
-    # Tokenize
     tokens = word_tokenize(text)
-    # Remove stopwords
-    stop_words = set(stopwords.words('english'))
     tokens = [token for token in tokens if token not in stop_words]
-    # Lemmatize with spaCy
-    doc = nlp(' '.join(tokens))
-    cleaned_text = ' '.join([token.lemma_ for token in doc])
-    return cleaned_text
+    return ' '.join(tokens)
 
-# NER extraction
-def extract_entities(text):
-    doc = nlp(text)
-    entities = [{'text': ent.text, 'label': ent.label_} for ent in doc.ents if ent.label_ in ['PERSON', 'ORG', 'GPE']]
-    return entities
+def fetch_gdelt_news(query: str) -> List[Dict]:
+    def format_gdelt_date(date_str: str) -> str:
+        try:
+            return datetime.strptime(date_str, "%Y%m%d%H%M%S").isoformat()
+        except Exception:
+            return date_str
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting FastAPI server")
-    if not NEWS_API_KEY:
-        logger.error("NEWS_API_KEY is not set. Please provide a valid NewsAPI key.")
-        raise Exception("NEWS_API_KEY is required.")
-
-@app.get("/health")
-async def health_check():
-    logger.debug("Health check endpoint accessed")
-    return {"status": "FastAPI service is running"}
+    gdelt_url = "http://api.gdeltproject.org/api/v2/doc/doc"
+    params = {
+        "query": query,
+        "mode": "artlist",
+        "maxrecords": 20,
+        "timespan": "1m",
+        "format": "json"
+    }
+    try:
+        response = requests.get(gdelt_url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        articles = data.get("articles", [])
+        standardized_articles = [
+            {
+                "title": article.get("title", ""),
+                "description": article.get("seendate", ""),
+                "url": article.get("url", ""),
+                "urlToImage": article.get("socialimage", ""),
+                "publishedAt": format_gdelt_date(article.get("seendate", ""))
+            } for article in articles
+        ]
+        return standardized_articles
+    except requests.RequestException as e:
+        logger.error(f"GDELT request failed: {str(e)}")
+        return []
 
 @app.get("/fetch-news")
-async def fetch_news(
-    keyword: str = Query(None),
-    city: str = Query(None),
-    topic: str = Query(None),
-    region: str = Query(None)
-):
-    logger.debug(f"Fetching news with parameters: keyword={keyword}, city={city}, topic={topic}, region={region}")
-    params = {'apiKey': NEWS_API_KEY, 'language': 'en'}
-    query = []
-    if keyword:
-        query.append(keyword)
-    if city:
-        query.append(city)
-    if topic:
-        query.append(topic)
-    if region:
-        query.append(region)
-    if query:
-        params['q'] = ' '.join(query)
+async def fetch_news(topic: str = "", keyword: str = "", region: str = ""):
+    query = f"{keyword} {topic} {region}".strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="At least one query parameter is required")
+
+    api_key = "b10326e677404906b8278f44b674b094"
+    url = "https://newsapi.org/v2/everything"
+    params = {
+        "q": query or "news",
+        "language": "en",
+        "pageSize": 20,
+        "apiKey": api_key
+    }
+
     try:
-        response = requests.get('https://newsapi.org/v2/everything', params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
-        articles = response.json().get('articles', [])
-        if not articles:
-            logger.warning("No articles found for the given parameters")
-            return {"articles": [], "sentiments": {"positive": 0, "negative": 0, "neutral": 0}, "trends": {}}
-        sentiments = {'positive': 0, 'negative': 0, 'neutral': 0}
-        trends = {}
+        data = response.json()
+
+        if data.get("status") != "ok":
+            logger.warning("NewsAPI failed, trying GDELT")
+            articles = fetch_gdelt_news(query)
+        else:
+            articles = data.get("articles", [])
+
         processed_articles = []
+        all_text = ""
+
         for article in articles:
-            text = article['title'] + ' ' + article.get('description', '')
-            # Preprocess text
-            cleaned_text = preprocess_text(text)
-            # Sentiment analysis
-            sentiment_result = sentiment_analyzer(cleaned_text or text)
-            sentiment = sentiment_result[0]['label'].lower()
-            sentiment_score = sentiment_result[0]['score']
-            if sentiment == 'positive':
-                sentiments['positive'] += 1
-            elif sentiment == 'negative':
-                sentiments['negative'] += 1
-            else:
-                sentiments['neutral'] += 1
-            # NER
-            entities = extract_entities(text)
-            # Trends
-            for word in cleaned_text.split():
-                if len(word) > 3:
-                    trends[word] = trends.get(word, 0) + 1
-            article['sentiment'] = sentiment
-            article['sentiment_score'] = sentiment_score
-            article['entities'] = entities
-            processed_articles.append(article)
-        top_trends = dict(sorted(trends.items(), key=lambda item: item[1], reverse=True)[:10])
-        logger.info("News fetched successfully")
+            title = article.get("title", "")
+            description = article.get("description", "")
+            content = f"{title} {description}"
+            all_text += content + " "
+
+            cleaned_content = clean_text(content)
+            doc = nlp(cleaned_content)
+            entities = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
+
+            sentiment_result = sentiment_analyzer(cleaned_content[:512])[0]
+            sentiment = "positive" if sentiment_result["label"] == "POSITIVE" else "negative"
+            sentiment_score = sentiment_result["score"]
+
+            processed_articles.append({
+                "title": title,
+                "description": description,
+                "url": article.get("url", ""),
+                "urlToImage": article.get("urlToImage", ""),
+                "publishedAt": article.get("publishedAt", ""),
+                "sentiment": sentiment,
+                "sentiment_score": sentiment_score,
+                "entities": entities
+            })
+
+        # Sort articles by publishedAt in descending order (latest first)
+        processed_articles.sort(
+            key=lambda x: parser.parse(x.get("publishedAt")) if x.get("publishedAt") else datetime.min,
+            reverse=True
+        )
+
+        cleaned_text = clean_text(all_text)
+        tokens = word_tokenize(cleaned_text)
+        word_freq = Counter(tokens)
+        trends = dict(word_freq.most_common(5))
+
+        sentiments = {"positive": 0, "negative": 0, "neutral": 0}
+        for article in processed_articles:
+            sentiment = article.get("sentiment", "neutral")
+            sentiments[sentiment] = sentiments.get(sentiment, 0) + 1
+
         return {
             "articles": processed_articles,
             "sentiments": sentiments,
-            "trends": top_trends
+            "trends": trends
         }
+
     except requests.RequestException as e:
         logger.error(f"NewsAPI request failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch news from NewsAPI: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error in fetch_news: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        articles = fetch_gdelt_news(query)
+        processed_articles = []
+        all_text = ""
+
+        for article in articles:
+            title = article.get("title", "")
+            description = article.get("description", "")
+            content = f"{title} {description}"
+            all_text += content + " "
+
+            cleaned_content = clean_text(content)
+            doc = nlp(cleaned_content)
+            entities = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
+
+            sentiment_result = sentiment_analyzer(cleaned_content[:512])[0]
+            sentiment = "positive" if sentiment_result["label"] == "POSITIVE" else "negative"
+            sentiment_score = sentiment_result["score"]
+
+            processed_articles.append({
+                "title": title,
+                "description": description,
+                "url": article.get("url", ""),
+                "urlToImage": article.get("urlToImage", ""),
+                "publishedAt": article.get("publishedAt", ""),
+                "sentiment": sentiment,
+                "sentiment_score": sentiment_score,
+                "entities": entities
+            })
+
+        # Sort articles by publishedAt in descending order (latest first)
+        processed_articles.sort(
+            key=lambda x: parser.parse(x.get("publishedAt")) if x.get("publishedAt") else datetime.min,
+            reverse=True
+        )
+
+        cleaned_text = clean_text(all_text)
+        tokens = word_tokenize(cleaned_text)
+        word_freq = Counter(tokens)
+        trends = dict(word_freq.most_common(5))
+
+        sentiments = {"positive": 0, "negative": 0, "neutral": 0}
+        for article in processed_articles:
+            sentiment = article.get("sentiment", "neutral")
+            sentiments[sentiment] = sentiments.get(sentiment, 0) + 1
+
+        return {
+            "articles": processed_articles,
+            "sentiments": sentiments,
+            "trends": trends
+        }
 
 @app.post("/analyze-text")
-async def analyze_text(data: dict):
-    logger.debug("Analyzing text")
-    try:
-        text = data.get('text')
-        if not text:
-            logger.warning("No text provided for analysis")
-            raise HTTPException(status_code=400, detail="Text is required")
-        # Preprocess text
-        cleaned_text = preprocess_text(text)
-        # Sentiment analysis
-        sentiment_result = sentiment_analyzer(cleaned_text or text)
-        sentiment = sentiment_result[0]['label'].upper()
-        sentiment_score = sentiment_result[0]['score']
-        # NER
-        entities = extract_entities(text)
-        logger.info("Text analysis successful")
-        return {
-            "sentiment": sentiment,
-            "sentiment_score": sentiment_score,
-            "entities": entities
-        }
-    except Exception as e:
-        logger.error(f"Unexpected error in analyze_text: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+async def analyze_text(request: Dict):
+    text = request.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
 
-if __name__ == "__main__":
-    logger.info("Running FastAPI server")
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    cleaned_text = clean_text(text)
+    sentiment_result = sentiment_analyzer(cleaned_text[:512])[0]
+    sentiment = "positive" if sentiment_result["label"] == "POSITIVE" else "negative"
+    sentiment_score = sentiment_result["score"]
+
+    doc = nlp(cleaned_text)
+    entities = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
+
+    return {
+        "sentiment": sentiment,
+        "sentiment_score": sentiment_score,
+        "entities": entities
+    }
