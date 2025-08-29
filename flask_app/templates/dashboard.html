@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container-fluid py-5" style="background: var(--bg-gradient); min-height: 100vh;">
     <!-- Filter Section -->
-    <section class="container mb-4">
+    <section class="container mb-5">
         <h2 class="mb-4 text-center fw-bold animate__animated animate__fadeInDown" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">News Search</h2>
         <form method="POST" action="{{ url_for('search') }}" class="bg-white p-4 rounded shadow-lg animate__animated animate__fadeInDown" style="border-radius: 15px; animation-delay: 0.2s;">
             <div class="row g-3 align-items-end">
@@ -27,6 +27,10 @@
                         <option value="Business">Business</option>
                         <option value="Technology">Technology</option>
                         <option value="Health">Health</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Politics">Politics</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Science">Science</option>
                     </select>
                 </div>
                 <div class="col-md-3 col-sm-6">
@@ -43,7 +47,7 @@
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <section class="container mb-4">
+            <section class="container mb-5">
                 {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show animate__animated animate__shakeX" role="alert">
                         {{ message }}
@@ -56,7 +60,7 @@
 
     <!-- Active Filters Section -->
     {% if data and (data.region or data.topic or data.keyword) %}
-        <section class="container mb-4">
+        <section class="container mb-5">
             <div class="flex flex-wrap gap-2" id="active-filters">
                 {% if data.region %}
                     <span class="badge bg-secondary animate__animated animate__fadeInLeft" style="animation-delay: 0.1s;">
@@ -76,7 +80,7 @@
             </div>
         </section>
     {% else %}
-        <section class="container mb-4">
+        <section class="container mb-5">
             <div class="text-gray-400 text-lg font-medium animate__animated animate__fadeIn" style="color: var(--text-body);">
                 Showing <span style="color: var(--accent-secondary);">All News</span>
             </div>
@@ -87,19 +91,10 @@
     <section class="container">
         {% if data %}
             <h3 class="mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">News Articles</h3>
-            <div class="row g-3">
-                {% for article in data.articles[:12] %}
+            <div class="row g-4">
+                {% for article in data.articles[:10] %}  <!-- Changed from [:12] to [:10] -->
                     <div class="col-md-3 col-sm-6">
                         <div class="card h-100 shadow-lg border-0 animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
-                            <div class="card-img-top" style="height: 200px; overflow: hidden;">
-                                {% if article.urlToImage %}
-                                    <img src="{{ article.urlToImage }}" class="img-fluid w-100 h-100" style="object-fit: cover;" alt="Article Image">
-                                {% else %}
-                                    <div class="bg-light text-muted text-center d-flex align-items-center justify-content-center h-100">
-                                        No Image
-                                    </div>
-                                {% endif %}
-                            </div>
                             <div class="card-body p-3">
                                 {% set sentiment = article.sentiment | default('neutral') %}
                                 <span class="badge mb-2 animate__animated animate__bounceIn" style="background-color: {% if sentiment == 'positive' %}var(--accent-success){% elif sentiment == 'negative' %}var(--accent-primary){% else %}var(--accent-warning){% endif %};">
@@ -140,111 +135,118 @@
         {% endif %}
     </section>
 
-    <!-- Charts Section -->
+    <!-- Visualization Dashboard -->
     {% if data %}
         <section class="container mt-5">
-            <h3 class="mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">Insights</h3>
-            <div class="row g-3">
+            <h3 class="mb-4 fw-bold" style="font-family: 'Poppins', sans-serif; color: var(--text-headline); text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">Insights Dashboard</h3>
+            <div class="row g-5">
+                <!-- Sentiment Distribution (Donut Chart) -->
                 <div class="col-md-6">
-                    <div class="card shadow-lg border-0 p-4 animate__animated animate__zoomIn">
+                    <div class="card shadow-lg border-0 p-4" style="background: var(--card-bg-light); height: 450px;">
                         <h4 class="text-center mb-3 fw-bold" style="font-size: 1.2rem; color: var(--text-headline);">Sentiment Distribution</h4>
-                        <div class="chart-container" style="width: 100%; max-width: 300px; height: 250px; margin: 0 auto;">
-                            <canvas id="sentimentChart"></canvas>
+                        <div class="chart-container" style="position: relative; width: 100%; max-width: 300px; height: 300px; margin: 0 auto;">
+                            <canvas id="sentimentChart" class="animate__animated animate__zoomIn" style="animation-delay: 0.1s;"></canvas>
                         </div>
                     </div>
                 </div>
+                <!-- Source Distribution (Pie Chart) -->
                 <div class="col-md-6">
-                    <div class="card shadow-lg border-0 p-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
-                        <h4 class="text-center mb-3 fw-bold" style="font-size: 1.2rem; color: var(--text-headline);">Most Repeated Words</h4>
-                        <div class="chart-container" style="width: 100%; max-width: 300px; height: 250px; margin: 0 auto;">
-                            <canvas id="trendsChart"></canvas>
+                    <div class="card shadow-lg border-0 p-4" style="background: var(--card-bg-light); height: 450px;">
+                        <h4 class="text-center mb-3 fw-bold" style="font-size: 1.2rem; color: var(--text-headline);">Source Distribution</h4>
+                        <div class="chart-container" style="position: relative; width: 100%; max-width: 300px; height: 300px; margin: 0 auto;">
+                            <canvas id="sourceChart" class="animate__animated animate__fadeIn" style="animation-delay: 0.2s;"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    try {
-                        // Sentiment Pie Chart
-                        const sentimentData = {
-                            positive: {{ data.sentiments.positive | default(0) }},
-                            negative: {{ data.sentiments.negative | default(0) }},
-                            neutral: {{ data.sentiments.neutral | default(0) }}
-                        };
-                        const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+        </section>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                try {
+                    console.log('Data available:', {{ data | tojson }});
+
+                    // Sentiment Distribution (Donut Chart)
+                    const sentiments = {{ data.sentiments | tojson }} || {};
+                    const sentimentCounts = {
+                        positive: Object.values(sentiments).filter(s => s.sentiment === 'positive').length,
+                        neutral: Object.values(sentiments).filter(s => s.sentiment === 'neutral').length,
+                        negative: Object.values(sentiments).filter(s => s.sentiment === 'negative').length
+                    };
+                    console.log('Sentiment Counts:', sentimentCounts);
+                    const sentimentCtx = document.getElementById('sentimentChart')?.getContext('2d');
+                    if (sentimentCtx) {
                         new Chart(sentimentCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Positive', 'Neutral', 'Negative'],
+                                datasets: [{
+                                    data: [sentimentCounts.positive || 0, sentimentCounts.neutral || 0, sentimentCounts.negative || 0],
+                                    backgroundColor: ['#22C55E', '#9CA3AF', '#EF4444'],
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderWidth: 2,
+                                    hoverBackgroundColor: ['#16A34A', '#6B7280', '#DC2626']
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: { position: 'top', labels: { font: { size: 12, family: 'Poppins' } } },
+                                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}%` } }
+                                },
+                                animation: { animateScale: true, animateRotate: true, duration: 1000 },
+                                onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; }
+                            }
+                        });
+                    }
+
+                    // Source Distribution (Pie Chart)
+                    const articles = {{ data.articles | tojson }} || [];
+                    const sourceCounts = articles.reduce((acc, article) => {
+                        const sourceName = article.source?.name || 'Unknown';
+                        acc[sourceName] = (acc[sourceName] || 0) + 1;
+                        return acc;
+                    }, {});
+                    const topSources = Object.entries(sourceCounts)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 12) // Keep 12 for consistency, though limited by 10 articles
+                        .map(([name, count]) => ({ name, count }));
+                    console.log('Source Counts:', topSources);
+                    const sourceCtx = document.getElementById('sourceChart')?.getContext('2d');
+                    if (sourceCtx && topSources.length > 0) {
+                        new Chart(sourceCtx, {
                             type: 'pie',
                             data: {
-                                labels: ['Positive', 'Negative', 'Neutral'],
+                                labels: topSources.map(s => s.name),
                                 datasets: [{
-                                    data: [
-                                        sentimentData.positive || 0,
-                                        sentimentData.negative || 0,
-                                        sentimentData.neutral || 0
-                                    ],
-                                    backgroundColor: [
-                                        '#22C55E', // Vibrant green for positive
-                                        '#EF4444', // Vibrant red for negative
-                                        '#F59E0B'  // Amber for neutral
-                                    ],
-                                    borderColor: 'var(--card-bg-light)',
-                                    borderWidth: 2
+                                    data: topSources.map(s => s.count),
+                                    backgroundColor: ['#3B82F6', '#22C55E', '#8B5CF6', '#F97316', '#EF4444', '#6B7280', '#F59E0B', '#10B981', '#9333EA', '#F43F5E', '#14B8A6', '#8B5CF6'],
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderWidth: 2,
+                                    hoverBackgroundColor: ['#2563EB', '#16A34A', '#6B46C1', '#F59E0B', '#DC2626', '#4B5563', '#D97706', '#0D9488', '#7C2D96', '#E11D48', '#0F766E', '#6B46C1']
                                 }]
                             },
                             options: {
                                 responsive: true,
                                 plugins: {
-                                    legend: {
-                                        position: 'top',
-                                        labels: { font: { size: 10, family: 'Poppins' } }
-                                    }
+                                    legend: { position: 'top', labels: { font: { size: 10, family: 'Poppins' } } }, // Reduced font size for more labels
+                                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}` } }
                                 },
-                                animation: {
-                                    animateScale: true, // Expand slices from center
-                                    animateRotate: true
-                                }
+                                animation: { animateRotate: true, duration: 1000 },
+                                onHover: (event, chartElement) => { event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default'; }
                             }
                         });
-
-                        // Top Keywords Bar Chart
-                        const trendsData = {
-                            labels: [{% for key in data.trends.keys() %}'{{ key }}'{% if not loop.last %},{% endif %}{% endfor %}],
-                            values: [{% for value in data.trends.values() %}{{ value }}{% if not loop.last %},{% endif %}{% endfor %}]
-                        };
-                        const trendsCtx = document.getElementById('trendsChart').getContext('2d');
-                        new Chart(trendsCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: trendsData.labels.length ? trendsData.labels : ['No Data'],
-                                datasets: [{
-                                    label: 'Frequency',
-                                    data: trendsData.values.length ? trendsData.values : [0],
-                                    backgroundColor: 'linear-gradient(180deg, #3B82F6, #1D4ED8)',
-                                    borderColor: '#111827',
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                scales: {
-                                    y: { beginAtZero: true, ticks: { font: { size: 10, family: 'Poppins' } } },
-                                    x: { ticks: { font: { size: 10, family: 'Poppins' }, maxRotation: 45, minRotation: 45 } }
-                                },
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                animation: {
-                                    animateRotate: true, // Bars grow upward
-                                    animateScale: true
-                                }
-                            }
-                        });
-                    } catch (error) {
-                        console.error('Chart rendering error:', error);
+                    } else {
+                        console.log('No valid sources to display in pie chart.');
                     }
-                });
-            </script>
-        </section>
+                } catch (error) {
+                    console.error('Visualization rendering error:', error);
+                }
+            });
+        </script>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

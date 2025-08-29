@@ -5,17 +5,24 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import requests
 import os
+from dotenv import load_dotenv
 import logging
 from bson.objectid import ObjectId
 import socket
 from datetime import datetime
 from dateutil import parser
 from authlib.integrations.flask_client import OAuth
-from dotenv import load_dotenv
-import os
+from textblob import TextBlob
+import spacy
+
+# Load environment variables
 load_dotenv()
 client_id = os.getenv('GOOGLE_CLIENT_ID')
 client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+
+# Load SpaCy model for NER
+nlp = spacy.load("en_core_web_sm")
+
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -269,21 +276,21 @@ def update_profile():
 def search():
     logger.debug("Accessing search route")
     try:
-        # Check if FastAPI service is reachable
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
-        result = sock.connect_ex(('127.0.0.1', 8000))
-        sock.close()
-        if result != 0:
-            flash("News service is not running. Please start the news service and try again.")
-            logger.error("FastAPI service unreachable on port 8000")
-            return redirect(url_for('dashboard'))
-
         region = request.form.get('region', '')
         topic = request.form.get('topic', '')
         keyword = request.form.get('keyword', '')
         logger.debug(f"Search parameters: region={region}, topic={topic}, keyword={keyword}")
-        response = requests.get('http://127.0.0.1:8000/fetch-news', params={'topic': topic, 'city': '', 'keyword': keyword, 'region': region}, timeout=10)
+        api_key = 'dbbd97c175539bdded202e7c41c2c76d'
+        base_url = 'https://gnews.io/api/v4/search'
+        params = {
+            'q': keyword,
+            'lang': 'en',  # Default to English as per documentation
+            'country': region.lower() if region else '',
+            'topic': topic.lower() if topic else '',
+            'token': api_key,
+            'max': 10  
+        }
+        response = requests.get(base_url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         if 'error' in data:
@@ -292,19 +299,57 @@ def search():
             return redirect(url_for('dashboard'))
         if not data.get('articles'):
             flash(data.get('message', 'No articles found for the given parameters.'))
-            logger.warning("No articles returned from FastAPI")
+            logger.warning("No articles returned from GNews API")
             return redirect(url_for('dashboard'))
-        logger.info("Search successful, rendering dashboard with data")
+        logger.info("Search successful, processing data")
+
+        # Initialize Hugging Face sentiment analysis pipeline
+        from transformers import pipeline
+        try:
+            sentiment_analyzer = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+        except Exception as e:
+            flash("Error loading Hugging Face model. Falling back to default setup.")
+            logger.error(f"Failed to load Hugging Face model: {str(e)}")
+            return redirect(url_for('dashboard'))
+
+        # Process sentiment and entities for each article
+        articles_with_analysis = []
+        for article in data['articles']:
+            # Sentiment Analysis using Hugging Face
+            text = (article.get('title', '') + ' ' + article.get('description', '')).strip()
+            if text:
+                try:
+                    result = sentiment_analyzer(text[:512])  # Limit to 512 tokens for model compatibility
+                    sentiment = result[0]['label'].lower()  # e.g., 'POSITIVE' or 'NEGATIVE'
+                    sentiment_score = result[0]['score'] if sentiment == 'positive' else -result[0]['score']
+                except Exception as e:
+                    logger.warning(f"Sentiment analysis failed for article: {str(e)}. Using neutral fallback.")
+                    sentiment = 'neutral'
+                    sentiment_score = 0.0
+            else:
+                sentiment = 'neutral'
+                sentiment_score = 0.0
+
+            # Named Entity Recognition using SpaCy
+            doc = nlp(article.get('title', '') + ' ' + article.get('description', ''))
+            entities = [{'text': ent.text, 'label': ent.label_} for ent in doc.ents if ent.label_ in ['PERSON', 'ORG', 'GPE', 'LOC']]
+
+            article['sentiment'] = sentiment
+            article['sentiment_score'] = round(sentiment_score, 2)
+            article['entities'] = entities
+            articles_with_analysis.append(article)
+
+        logger.info("Data processing complete, rendering dashboard")
         return render_template('dashboard.html', data={
-            'articles': data['articles'],
-            'sentiments': data.get('sentiments', {}),
-            'trends': data.get('trends', {}),
+            'articles': articles_with_analysis,
+            'sentiments': {article['title']: {'sentiment': article['sentiment'], 'score': article['sentiment_score']} for article in articles_with_analysis},
+            'trends': {},  # Placeholder, can be enhanced later
             'region': region,
             'topic': topic,
             'keyword': keyword
         })
     except requests.RequestException as e:
-        flash("Unable to fetch news. Please ensure the news service is running and try again.")
+        flash("Unable to fetch news. Please ensure the API is accessible and try again.")
         logger.error(f"Search request error: {str(e)}")
         return redirect(url_for('dashboard'))
     except Exception as e:
@@ -323,20 +368,20 @@ def analyze():
                 flash('Text input is required')
                 logger.warning("Analyze failed: Missing text input")
                 return redirect(url_for('analyze'))
-            response = requests.post('http://127.0.0.1:8000/analyze-text', json={'text': text}, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            if 'error' in result:
-                flash(f"Error analyzing text: {result['error']}")
-                logger.warning(f"Analyze failed: {result['error']}")
-                return redirect(url_for('analyze'))
+            # Local sentiment and NER analysis
+            analysis = TextBlob(text)
+            sentiment_score = analysis.sentiment.polarity
+            sentiment = 'positive' if sentiment_score > 0 else 'negative' if sentiment_score < 0 else 'neutral'
+            doc = nlp(text)
+            entities = [{'text': ent.text, 'label': ent.label_} for ent in doc.ents if ent.label_ in ['PERSON', 'ORG', 'GPE', 'LOC']]
+            result = {
+                'sentiment': sentiment,
+                'sentiment_score': round(sentiment_score, 2),
+                'entities': entities
+            }
             logger.info("Text analysis successful")
             return render_template('analyze.html', result=result)
         return render_template('analyze.html')
-    except requests.RequestException as e:
-        flash("Unable to analyze text. Please ensure the news service is running and try again.")
-        logger.error(f"Analyze request error: {str(e)}")
-        return redirect(url_for('analyze'))
     except Exception as e:
         flash(f"An unexpected error occurred during analysis: {str(e)}")
         logger.error(f"Unexpected analyze error: {str(e)}")
