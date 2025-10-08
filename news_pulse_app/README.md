@@ -8,6 +8,7 @@ A complete starter to build a personalized news app using **Streamlit**, **SQLit
 - ⚙️ Preferences: categories, sources, keywords
 - 🔎 Search bar to query news
 - 🧠 Sentiment analysis per article (positive / neutral / negative + score)
+- 🤖 AI-powered Gemini chatbot: ask questions about news, get summaries, or personalized recommendations
 - 🏷️ Named Entity Recognition (NER) to extract key people, places, and organizations from articles
 - 🔖 Bookmarks (save/remove) + export to CSV
 - 🏠 Home: Top headlines by your preferred categories
@@ -46,6 +47,7 @@ streamlit run app.py
 ## 3) First Run
 - The app initializes `app.db` using `schema.sql` automatically.
 - Register a new account, login, set your Preferences, and start searching!
+- Chat with the Gemini AI chatbot for summaries, explanations, and personalized news guidance.
 
 ## 4) Project Structure
 ```
@@ -53,7 +55,8 @@ news_pulse_app/
 ├─ app.py              # Streamlit app (UI + logic)
 ├─ db.py               # SQLite helpers (users, prefs, bookmarks, history)
 ├─ news_api.py         # GNews API wrapper
-├─ sentiment.py        # VADER sentiment analysis
+├─ sentiment.py
+├─ gemini_ai.py         # VADER sentiment analysis
 ├─ utils.py            # Helpers (read-time, categories)
 ├─ schema.sql          # Database schema
 ├─ requirements.txt
@@ -64,6 +67,7 @@ news_pulse_app/
 ## 5) Notes
 - Sentiment uses the article **title + description** for a quick signal.
 - NER highlights important entities (like companies, politicians, locations) to give richer context per article.
+- Gemini AI provides interactive summaries and Q&A for your news feed.
 - Streamlit keeps login session in `st.session_state` (not secure for production).
 - For production, add proper session management and HTTPS.
 
@@ -73,3 +77,4 @@ news_pulse_app/
 - Add admin dashboard to manage users.
 - Add per-article feedback to refine keyword prefs.
 - Use NER results to auto-tag bookmarks and improve personalized news recommendations.
+- Enhance Gemini AI with custom prompts or multi-turn conversations.
