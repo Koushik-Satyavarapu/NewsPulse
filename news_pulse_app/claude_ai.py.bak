@@ -1,0 +1,115 @@
+import os
+from dotenv import load_dotenv
+
+# Try to import google generative ai; if missing, functions will raise helpful error.
+try:
+    import google.generativeai as genai
+except Exception as e:
+    genai = None
+
+load_dotenv()
+
+# Use GEMINI_API_KEY in .env
+API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")  # allow override via env
+
+if genai and API_KEY:
+    try:
+        genai.configure(api_key=API_KEY)
+    except Exception:
+        # some versions may use different configure signature; ignore here and let calls fail later with clear message
+        pass
+
+def _extract_text_from_response(resp):
+    """Attempt to extract generated text from several possible response shapes."""
+    if not resp:
+        return ""
+    # common attribute
+    if hasattr(resp, 'text'):
+        try:
+            return resp.text if isinstance(resp.text, str) else str(resp.text)
+        except Exception:
+            pass
+    # some versions return dict-like
+    try:
+        # check for candidates/content
+        if isinstance(resp, dict):
+            # text generation formats
+            if "candidates" in resp and resp["candidates"]:
+                c = resp["candidates"][0]
+                return c.get("content") or c.get("text") or str(c)
+            if "output" in resp:
+                out = resp.get("output")
+                if isinstance(out, list) and out:
+                    return out[0].get("content") or str(out[0])
+                if isinstance(out, str):
+                    return out
+            # fallback to stringifying
+            return str(resp)
+    except Exception:
+        pass
+    # final fallback
+    return str(resp)
+
+def summarize_text(text, max_tokens=300):
+    """Summarize given text using Gemini. Returns a string summary or an error message."""
+    if not text or not text.strip():
+        return ""
+    if genai is None:
+        return "Gemini client (google.generativeai) not installed. Install with: pip install google-generativeai"
+    if not API_KEY:
+        return "Missing GEMINI_API_KEY environment variable."
+
+    prompt = f"Summarize the following news article in a concise paragraph (max {max_tokens} tokens):\n\n{text}"
+    try:
+        # Try multiple client APIs for compatibility
+        try:
+            # Preferred: modern client generate_text / generate method
+            resp = genai.generate_text(model=MODEL, text=prompt, max_output_tokens=max_tokens)
+            return _extract_text_from_response(resp)
+        except Exception:
+            pass
+        try:
+            model = genai.GenerativeModel(MODEL)
+            resp = model.generate_content(prompt, max_output_tokens=max_tokens)
+            return _extract_text_from_response(resp)
+        except Exception:
+            pass
+        # Last resort: older API shape
+        try:
+            resp = genai.predict(model=MODEL, prompt=prompt)
+            return _extract_text_from_response(resp)
+        except Exception as e:
+            return f"Error during summarization: {str(e)}"
+    except Exception as e:
+        return f"Error during summarization: {str(e)}"
+
+def generate_questions(text, num_questions=5):
+    """Generate study/discussion questions from text using Gemini."""
+    if not text or not text.strip():
+        return ""
+    if genai is None:
+        return "Gemini client (google.generativeai) not installed. Install with: pip install google-generativeai"
+    if not API_KEY:
+        return "Missing GEMINI_API_KEY environment variable."
+
+    prompt = f"Generate {num_questions} clear, concise, thought-provoking study questions based on the following article:\n\n{text}\n\nReturn each question on a separate line."
+    try:
+        try:
+            resp = genai.generate_text(model=MODEL, text=prompt, max_output_tokens=300)
+            return _extract_text_from_response(resp)
+        except Exception:
+            pass
+        try:
+            model = genai.GenerativeModel(MODEL)
+            resp = model.generate_content(prompt, max_output_tokens=300)
+            return _extract_text_from_response(resp)
+        except Exception:
+            pass
+        try:
+            resp = genai.predict(model=MODEL, prompt=prompt)
+            return _extract_text_from_response(resp)
+        except Exception as e:
+            return f"Error during question generation: {str(e)}"
+    except Exception as e:
+        return f"Error during question generation: {str(e)}"

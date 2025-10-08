@@ -1,0 +1,9 @@
+streamlit
+requests
+python-dotenv
+passlib[bcrypt]
+nltk
+pandas
+
+# Added for Gemini support
+google-genai

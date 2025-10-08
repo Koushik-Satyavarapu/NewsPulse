@@ -1,0 +1,77 @@
+{
+  "files": [
+    ".env",
+    ".env.example",
+    "README.md",
+    "additional_requirements.txt",
+    "news_pulse_app/.env",
+    "news_pulse_app/.env.example",
+    "news_pulse_app/README.md",
+    "news_pulse_app/__pycache__/db.cpython-313.pyc",
+    "news_pulse_app/__pycache__/news_api.cpython-313.pyc",
+    "news_pulse_app/__pycache__/sentiment.cpython-313.pyc",
+    "news_pulse_app/__pycache__/utils.cpython-313.pyc",
+    "news_pulse_app/app.db",
+    "news_pulse_app/app.py",
+    "news_pulse_app/claude_ai.py",
+    "news_pulse_app/db.py",
+    "news_pulse_app/favorites.db",
+    "news_pulse_app/news_api.py",
+    "news_pulse_app/requirements.txt",
+    "news_pulse_app/schema.sql",
+    "news_pulse_app/sentiment.py",
+    "news_pulse_app/utils.py"
+  ],
+  "hits": {
+    ".env": [
+      "news"
+    ],
+    ".env.example": [
+      "Anthropic"
+    ],
+    "README.md": [
+      "news"
+    ],
+    "additional_requirements.txt": [
+      "openai"
+    ],
+    "news_pulse_app/.env": [
+      "news"
+    ],
+    "news_pulse_app/.env.example": [
+      "news"
+    ],
+    "news_pulse_app/README.md": [
+      "news",
+      "article",
+      "session",
+      "streamlit"
+    ],
+    "news_pulse_app/app.py": [
+      "news",
+      "article",
+      "session",
+      "streamlit"
+    ],
+    "news_pulse_app/claude_ai.py": [
+      "gemini",
+      "google",
+      "openai",
+      "news",
+      "article"
+    ],
+    "news_pulse_app/db.py": [
+      "article"
+    ],
+    "news_pulse_app/news_api.py": [
+      "news",
+      "article"
+    ],
+    "news_pulse_app/requirements.txt": [
+      "streamlit"
+    ],
+    "news_pulse_app/schema.sql": [
+      "article"
+    ]
+  }
+}
