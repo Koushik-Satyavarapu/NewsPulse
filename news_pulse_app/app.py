@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 import streamlit as st
-from passlib.hash import bcrypt
+from passlib.hash import bcrypt_sha256
 import spacy
 
 # Load spaCy model for NER (download 'en_core_web_sm' if not already installed)
@@ -16,7 +16,31 @@ from sentiment import analyze_sentiment
 from utils import estimate_read_time, CATEGORIES
 
 # ---------- Gemini Integration ----------
+# from google import genai
 from google import genai
+
+from google.genai import types
+
+import requests
+from bs4 import BeautifulSoup
+
+def fetch_full_article(url: str) -> str:
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        # Extract main article body; customize selector based on site (e.g., for Hindustan Times)
+        article_body = soup.select_one('div.storyDetail') or soup.select_one('article') or soup.find('div', class_='article-body')
+        if article_body:
+            # Remove scripts, styles, and ads for clean text
+            for elem in article_body.find_all(['script', 'style', 'aside', 'figure']):
+                elem.extract()
+            return article_body.get_text(strip=True)
+        return "Full article content not available."
+    except Exception as e:
+        return f"Error fetching full article: {e}"
+    
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -24,26 +48,106 @@ if not api_key:
     st.error("GEMINI_API_KEY not found in .env file!")
 client = genai.Client(api_key=api_key)
 
+
+# Example for summarize_text (apply similarly to other functions)
 def summarize_text(text: str) -> str:
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=f"Summarize the following text:\n{text}"
+        model="gemini-2.5-flash",
+        contents=f"Summarize the following text:\n{text}",
+        config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0))
     )
     return response.text
 
 def generate_questions(text: str) -> str:
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=f"Generate 3 questions based on the following text:\n{text}"
+        model="gemini-2.5-flash",
+        contents=f"Generate 3 questions based on the following text:\n{text}",
+        config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0))
     )
     return response.text
 
-def ask_question(context: str, question: str) -> str:
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=f"Context: {context}\nQuestion: {question}\nAnswer:"
-    )
-    return response.text
+def web_search(query: str, num_results: int = 5) -> str:
+    """Helper to perform web search using Gemini's tool and return formatted results."""
+    try:
+        # Use Gemini's web_search tool (requires tool-enabled API key)
+        tool = client.tools.web_search
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Search for: {query}",
+            tools=[tool],
+            config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0))
+        )
+        # Extract search results (format: list of titles, URLs, snippets)
+        results = []
+        for part in response.parts:
+            if hasattr(part, 'function_call') and part.function_call.name == 'web_search':
+                # Simulate parsing tool response (in real SDK, access via response.candidates[0].content.parts)
+                # For now, assume it returns a string summary; adjust based on actual tool output
+                results.append(part.function_call.args.get('query', query))  # Placeholder; integrate actual tool parsing
+        return "\n".join([f"[{i}]: {r}" for i, r in enumerate(results[:num_results])]) if results else "No search results available."
+    except Exception as e:
+        st.warning(f"Web search unavailable: {e}. Falling back to general knowledge.")
+        return ""
+
+def ask_question(article: Dict[str, Any], question: str) -> str:
+    url = article.get("url", "")
+    title = article.get("title", "")
+    desc = article.get("description", "") or ""
+    
+    # Step 1: Fetch full content
+    full_content = fetch_full_article(url) if url else title + "\n\n" + desc
+    context = full_content[:4000] + "..." if len(full_content) > 4000 else full_content
+    
+    # Step 2: Check if answer is directly in article
+    extraction_prompt = f"""Article Content: {context}
+
+Question: {question}
+
+Extract and return ONLY the direct answer from the article if it's explicitly mentioned or clearly inferable (e.g., full list if asked for team members). If no complete answer is found, respond exactly with: "NOT_FOUND".
+
+Be concise—no explanations or additions."""
+    
+    try:
+        extraction_response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=extraction_prompt,
+            config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0))
+        )
+        extracted = extraction_response.text.strip()
+        
+        if extracted != "NOT_FOUND" and len(extracted) > 10:  # Threshold for substantive content
+            return f"From the article: {extracted}"
+    except Exception as e:
+        st.warning(f"Extraction error: {e}")
+    
+    # Step 3: If not in article, use Gemini's knowledge + article info for reasoned answer
+    reasoned_prompt = f"""Article Info (title/desc): {title}\n{desc}
+
+Question: {question}
+
+The article doesn't have a complete direct answer, but use the provided info (e.g., mentioned players, context like 'under pressure' or competition) combined with your general knowledge of the topic (e.g., official squads, recent form, series previews) to provide a concise, accurate response. Structure it helpfully (e.g., numbered list for teams, with notes). Do not ask for more info—reason and answer based on this."""
+
+    try:
+        reasoned_response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=reasoned_prompt,
+            config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0))
+        )
+        return reasoned_response.text
+    except Exception as e:
+        # Final fallback: Simple web search if needed
+        try:
+            search_query = f"{title} {question}"
+            # Basic search simulation (replace with actual if you have API; for now, prompt Gemini for it)
+            search_fallback_prompt = f"{reasoned_prompt}\nIf still unclear, briefly note sources like BCCI/ESPN."
+            fallback_response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=search_fallback_prompt,
+                config=types.GenerateContentConfig(thinking_config=types.ThinkingConfig(thinking_budget=0))
+            )
+            return fallback_response.text
+        except Exception as fallback_e:
+            return f"Error generating response: {e}. Please rephrase your question."
 
 # ---------- App Setup ----------
 st.set_page_config(page_title="News Pulse - Personalized News", page_icon="📰", layout="wide")
@@ -56,14 +160,14 @@ def login(username: str, password: str) -> bool:
     user = db.get_user_by_username(username)
     if not user:
         return False
-    return bcrypt.verify(password, user["password_hash"])
+    return bcrypt_sha256.verify(password, user["password_hash"])
 
 def register(username: str, email: str, password: str) -> (bool, str):
     if not username or not email or not password:
         return False, "All fields are required."
     if len(password) < 6:
         return False, "Password must be at least 6 characters."
-    password_hash = bcrypt.hash(password[:72])
+    password_hash = bcrypt_sha256.hash(password)
     ok, err = db.create_user(username, email, password_hash)
     if not ok:
         return False, err or "Registration failed."
@@ -233,7 +337,7 @@ def render_article_card(article: Dict[str, Any], user_id: int):
                     except Exception as e:
                         st.warning(f"DB save (user message) failed: {e}")
                     try:
-                        answer = ask_question(article.get("title","") + "\n\n" + (article.get("description","") or ""), user_q)
+                        answer = ask_question(article, user_q)
                     except Exception as e:
                         answer = f"Error calling Gemini: {e}"
                     msgs.append({"role":"assistant","content": answer})
@@ -306,7 +410,12 @@ def page_bookmarks():
             if cols[0].button("Remove", key=f"rm_{art['id']}"):
                 db.remove_saved_article(st.session_state.user["id"], art["url"])
                 st.rerun()
-            cols[1].download_button("Export as CSV", data=_bookmarks_to_csv(saved), file_name="bookmarks.csv")
+            cols[1].download_button(
+                label="Export as CSV",
+                data=_bookmarks_to_csv(saved),
+                file_name="bookmarks.csv",
+                key=f"export_{art['id']}"  # Unique key per article
+            )
 
 def _bookmarks_to_csv(rows: List[Dict[str, Any]]) -> str:
     import csv, io
