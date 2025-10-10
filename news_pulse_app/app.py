@@ -375,6 +375,9 @@ def page_home():
         st.error(str(e))
 
 def page_search():
+    import plotly.express as px
+    from collections import Counter
+
     st.subheader("Search News")
     query = st.text_input("Search by topic, keyword, company, etc.", key="q")
     lang = st.selectbox("Language", ["en", "hi", "te", "ta", "ml", "bn"], index=0)
@@ -387,10 +390,57 @@ def page_search():
             results = search_news(query=query, lang=lang, country=country, max_results=limit)
             if not results:
                 st.info("No results found. Try adjusting your query.")
+                return
+
+            # --- Collect data for charts ---
+            source_counts = Counter()
+            sentiment_counts = Counter()
+
             for art in results:
                 render_article_card(art, st.session_state.user["id"])
+                # Count sources
+                source = art.get("source", "Unknown") or "Unknown"
+                source_counts[source] += 1
+                # Sentiment
+                title = art.get("title", "")
+                desc = art.get("description", "") or ""
+                combined = title + ". " + desc
+                label, _ = analyze_sentiment(combined)
+                sentiment_counts[label] += 1
+
+            # --- Divider before visualization ---
+            st.markdown("---")
+            st.subheader("📊 News Insights")
+
+            chart_col1, chart_col2 = st.columns(2)
+
+            # Pie Chart: News Source Distribution
+            if source_counts:
+                pie_data = [{"Source": src, "Articles": cnt} for src, cnt in source_counts.items()]
+                fig_pie = px.pie(
+                    pie_data, 
+                    names="Source", 
+                    values="Articles", 
+                    title="Distribution of News Sources",
+                    hole=0  # full pie
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+            # Donut Chart: Sentiment Breakdown
+            if sentiment_counts:
+                donut_data = [{"Sentiment": s, "Count": c} for s, c in sentiment_counts.items()]
+                fig_donut = px.pie(
+                    donut_data, 
+                    names="Sentiment", 
+                    values="Count", 
+                    title="Sentiment Analysis Overview",
+                    hole=0.45  # donut shape
+                )
+                st.plotly_chart(fig_donut, use_container_width=True)
+
         except Exception as e:
             st.error(str(e))
+
 
 def page_bookmarks():
     st.subheader("Your Bookmarks")
